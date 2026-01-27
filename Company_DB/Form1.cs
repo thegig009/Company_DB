@@ -1,139 +1,165 @@
 ﻿using System;
 using System.Data;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using Microsoft.Data.SqlClient;
 
 namespace Company_DB
 {
-    public partial class Form1 : Form
-    {
-		// 🔹 Connection String (แทน DBConnect.cs)
+	public partial class Form1 : Form
+	{
 		string connStr = @"Data Source=LAPTOP-KQD15JTK\SQLEXPRESS;
-                   Initial Catalog=Company_DB;
-                   Integrated Security=True;
-                   TrustServerCertificate=True;";
+                           Initial Catalog=Company_DB;
+                           Integrated Security=True;
+                           TrustServerCertificate=True;";
 
 		SqlConnection conn;
-        SqlDataAdapter da;
-        DataTable dt;
+		SqlDataAdapter da;
+		DataTable dt;
 
-        public Form1()
-        {
-            InitializeComponent();
-        }
+		public Form1()
+		{
+			InitializeComponent();
+		}
 
-        // 🔹 โหลดข้อมูล
+		
+		void ShowAllDepartment()
+		{
+			using (conn = new SqlConnection(connStr))
+			{
+				da = new SqlDataAdapter("SELECT * FROM Department", conn);
+				dt = new DataTable();
+				da.Fill(dt);
+				dgvDepartment.DataSource = dt;
+			}
+		}
 
+		
+		void InsertRecord()
+		{
+			using (conn = new SqlConnection(connStr))
+			{
+				conn.Open();
+				SqlTransaction tr = conn.BeginTransaction();
 
-        // 🔹 แสดงข้อมูลทั้งหมด
-        void ShowAllDepartment()
-        {
-            conn = new SqlConnection(connStr);
-            conn.Open();
+				try
+				{
+					string sql = @"INSERT INTO Department
+                                   (DeptName, DeptDesc, Phone, Email)
+                                   VALUES (@name, @desc, @phone, @email)";
 
-            da = new SqlDataAdapter("SELECT * FROM Department", conn);
-            dt = new DataTable();
-            da.Fill(dt);
+					SqlCommand cmd = new SqlCommand(sql, conn, tr);
+					cmd.Parameters.AddWithValue("@name", txtName.Text);
+					cmd.Parameters.AddWithValue("@desc", txtDesc.Text);
+					cmd.Parameters.AddWithValue("@phone", txtPhone.Text);
+					cmd.Parameters.AddWithValue("@email", txtemail.Text);
 
-            dgvDepartment.DataSource = dt;
-            conn.Close();
-        }
+					cmd.ExecuteNonQuery();
+					tr.Commit();
 
-        // 🔹 เพิ่มข้อมูล (Transaction + Store Procedure)
-        void InsertRecord()
-        {
-            conn = new SqlConnection(connStr);
-            conn.Open();
-            SqlTransaction tr = conn.BeginTransaction();
+					MessageBox.Show("เพิ่มข้อมูลเรียบร้อย ✅");
+				}
+				catch (Exception ex)
+				{
+					tr.Rollback();
+					MessageBox.Show("เพิ่มข้อมูลไม่สำเร็จ ❌\n" + ex.Message);
+				}
+			}
+		}
 
-            try
-            {
-                SqlCommand cmd = new SqlCommand("sp_InsertDepartment", conn, tr);
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@name", txtName.Text);
-                cmd.Parameters.AddWithValue("@desc", txtDesc.Text);
-                cmd.Parameters.AddWithValue("@phone", txtPhone.Text);
-                cmd.Parameters.AddWithValue("@email", txtemail.Text);
-                cmd.ExecuteNonQuery();
+		void Update_Record()
+		{
+			using (conn = new SqlConnection(connStr))
+			{
+				conn.Open();
+				SqlTransaction tr = conn.BeginTransaction();
 
-                tr.Commit();
-            }
-            catch
-            {
-                tr.Rollback();
-            }
+				try
+				{
+					string sql = @"UPDATE Department SET
+                                   DeptName = @name,
+                                   DeptDesc = @desc,
+                                   Phone = @phone,
+                                   Email = @email
+                                   WHERE DeptID = @id";
 
-            conn.Close();
-        }
+					SqlCommand cmd = new SqlCommand(sql, conn, tr);
+					cmd.Parameters.AddWithValue("@id", int.Parse(txtID.Text));
+					cmd.Parameters.AddWithValue("@name", txtName.Text);
+					cmd.Parameters.AddWithValue("@desc", txtDesc.Text);
+					cmd.Parameters.AddWithValue("@phone", txtPhone.Text);
+					cmd.Parameters.AddWithValue("@email", txtemail.Text);
 
-        // 🔹 แก้ไขข้อมูล
-        void Update_Record()
-        {
-            conn = new SqlConnection(connStr);
-            conn.Open();
+					cmd.ExecuteNonQuery();
+					tr.Commit();
 
-            SqlCommand cmd = new SqlCommand("sp_UpdateDepartment", conn);
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.AddWithValue("@id", txtID.Text);
-            cmd.Parameters.AddWithValue("@name", txtName.Text);
-            cmd.Parameters.AddWithValue("@desc", txtDesc.Text);
-            cmd.Parameters.AddWithValue("@phone", txtPhone.Text);
-            cmd.Parameters.AddWithValue("@fax", txtemail.Text);
-            cmd.ExecuteNonQuery();
+					MessageBox.Show("อัปเดตข้อมูลเรียบร้อย ✅");
+				}
+				catch (Exception ex)
+				{
+					tr.Rollback();
+					MessageBox.Show("อัปเดตไม่สำเร็จ ❌\n" + ex.Message);
+				}
+			}
+		}
 
-            conn.Close();
-        }
+		
+		void DeleteRecord()
+		{
+			using (conn = new SqlConnection(connStr))
+			{
+				conn.Open();
+				string sql = "DELETE FROM Department WHERE DeptID=@id";
+				SqlCommand cmd = new SqlCommand(sql, conn);
+				cmd.Parameters.AddWithValue("@id", int.Parse(txtID.Text));
+				cmd.ExecuteNonQuery();
 
-        // 🔹 ลบข้อมูล
-        void DeleteRecord()
-        {
-            conn = new SqlConnection(connStr);
-            conn.Open();
+				MessageBox.Show("ลบข้อมูลเรียบร้อย 🗑");
+			}
+		}
 
-            SqlCommand cmd = new SqlCommand(
-                "DELETE FROM Department WHERE DeptID=@id", conn);
-            cmd.Parameters.AddWithValue("@id", txtID.Text);
-            cmd.ExecuteNonQuery();
+	
+		void ClearText()
+		{
+			txtID.Clear();
+			txtName.Clear();
+			txtDesc.Clear();
+			txtPhone.Clear();
+			txtemail.Clear();
+		}
 
-            conn.Close();
-        }
+	
+		private void Form1_Load(object sender, EventArgs e)
+		{
+			ShowAllDepartment();
+		}
 
-        // 🔹 ปุ่มบันทึก
+		private void btnSave_Click(object sender, EventArgs e)
+		{
+			if (txtID.Text == "")
+				InsertRecord();
+			else
+				Update_Record();
 
-        // 🔹 ปุ่มลบ
+			ShowAllDepartment();
+			ClearText();
+		}
 
+		private void btnDelete_Click(object sender, EventArgs e)
+		{
+			DeleteRecord();
+			ShowAllDepartment();
+			ClearText();
+		}
 
-        // 🔹 คลิก DataGrid
+		private void dgvDepartment_CellMouseUp(object sender, DataGridViewCellMouseEventArgs e)
+		{
+			if (e.RowIndex < 0) return;
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            ShowAllDepartment();
-        }
-
-        private void btnSave_Click(object sender, EventArgs e)
-        {
-            if (txtID.Text == "")
-                InsertRecord();
-            else
-                Update_Record();
-
-            ShowAllDepartment();
-        }
-
-        private void btnDelete_Click(object sender, EventArgs e)
-        {
-            DeleteRecord();
-            ShowAllDepartment();
-        }
-
-        private void dgvDepartment_CellMouseUp(object sender, DataGridViewCellMouseEventArgs e)
-        {
 			txtID.Text = dgvDepartment.Rows[e.RowIndex].Cells[0].Value.ToString();
 			txtName.Text = dgvDepartment.Rows[e.RowIndex].Cells[1].Value.ToString();
 			txtDesc.Text = dgvDepartment.Rows[e.RowIndex].Cells[2].Value.ToString();
 			txtPhone.Text = dgvDepartment.Rows[e.RowIndex].Cells[3].Value.ToString();
 			txtemail.Text = dgvDepartment.Rows[e.RowIndex].Cells[4].Value.ToString();
 		}
-    }
+	}
 }
