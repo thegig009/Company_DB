@@ -1,4 +1,4 @@
-﻿namespace Company_DB
+namespace Company_DB
 {
     partial class Form1
     {
